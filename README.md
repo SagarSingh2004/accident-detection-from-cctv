@@ -2,6 +2,10 @@
 
 A production-grade deep learning system for automatic accident detection from CCTV footage and video files using a fine-tuned VGG16 model with **96% accuracy**.
 
+## Streamlit App Link
+
+[![Open Accident Detection App](https://img.shields.io/badge/Streamlit-App-green?style=for-the-badge)](https://accident-detection-from-cctv-wqc5apbzgp7hbnzueejgra.streamlit.app/)
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
@@ -196,6 +200,7 @@ pillow>=10.0.0
 numpy>=1.24.0
 pandas>=2.0.0
 scikit-learn>=1.3.0
+gdown
 ```
 
 ### Step 4: Verify Installation
