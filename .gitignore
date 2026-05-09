@@ -1,0 +1,61 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+myenv/
+env/
+ENV/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Environment variables
+.env
+
+# Dataset files
+data/
+datasets/
+
+# Logs
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Build files
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+temp/
+tmp/
+
+# Uploaded files
+uploads/
+
+# Generated outputs
+outputs/
+results/
+
+# CSV large files (optional)
+*.csv
+
+# Media files (optional)
+*.mp4
+*.avi
+*.mov
