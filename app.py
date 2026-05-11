@@ -4,6 +4,8 @@
 Production-grade accident detection from CCTV footage and video files
 Using Fine-Tuned VGG16 model (96% accuracy)
 
+✅ FIXED: Confidence threshold now works correctly for both images and videos!
+
 Run: streamlit run app.py
 """
 
@@ -485,13 +487,15 @@ class PredictionEngine:
     
     def predict_image(
         self,
-        image_input: Any
+        image_input: Any,
+        confidence_threshold: float = Config.DEFAULT_CONFIDENCE_THRESHOLD
     ) -> Tuple[Optional[bool], Optional[float], float, float]:
         """
         Predict if image contains accident
         
         Args:
             image_input: PIL Image or numpy array
+            confidence_threshold: Minimum confidence to flag as accident
             
         Returns:
             Tuple of (is_accident, confidence, accident_prob, non_accident_prob)
@@ -508,12 +512,13 @@ class PredictionEngine:
             non_accident_prob = float(prediction[0][0])
             accident_prob = 1.0 - non_accident_prob
             
-            # Determine classification
-            is_accident = non_accident_prob <= 0.5
+            # ✅ FIXED: Use confidence_threshold parameter instead of hardcoded 0.5
+            is_accident = accident_prob > confidence_threshold
             confidence = accident_prob if is_accident else non_accident_prob
             
             logger.info(
-                f"Prediction: accident={is_accident}, confidence={confidence:.3f}"
+                f"Prediction: accident={is_accident}, confidence={confidence:.3f}, "
+                f"threshold={confidence_threshold:.2f}, accident_prob={accident_prob:.3f}"
             )
             
             return is_accident, confidence, accident_prob, non_accident_prob
@@ -595,10 +600,11 @@ class VideoProcessor:
                 
                 # Process selected frames
                 if frame_count % process_interval == 0:
+                    # ✅ FIXED: Pass confidence_threshold to predict_image
                     is_accident, confidence, accident_prob, non_accident_prob = \
-                        self.prediction_engine.predict_image(frame)
+                        self.prediction_engine.predict_image(frame, confidence_threshold)
                     
-                    if is_accident and confidence and confidence > confidence_threshold:
+                    if is_accident and confidence is not None:
                         accident_frames.append({
                             'frame_number': frame_count,
                             'timestamp': frame_count / fps,
@@ -634,7 +640,8 @@ class VideoProcessor:
                         )
             
             logger.info(
-                f"Video processing complete: {len(accident_frames)} accidents detected"
+                f"Video processing complete: {len(accident_frames)} accidents detected "
+                f"with threshold {confidence_threshold:.2f}"
             )
             
             return {
@@ -644,7 +651,8 @@ class VideoProcessor:
                 'width': props['width'],
                 'height': props['height'],
                 'all_results': results,
-                'accident_frames': accident_frames
+                'accident_frames': accident_frames,
+                'confidence_threshold': confidence_threshold
             }
             
         except Exception as e:
@@ -753,16 +761,27 @@ class UIComponents:
                 max_value=0.9,
                 value=Config.DEFAULT_CONFIDENCE_THRESHOLD,
                 step=0.05,
-                help="Only alert if confidence exceeds this threshold"
+                help="⚠️ IMPORTANT: Only flag as accident if confidence exceeds this threshold. Higher = fewer false positives but may miss real accidents."
             )
             
             st.divider()
+            
+            # Display current threshold effect
             st.info(f"""
-            **Model Performance:**
+            **⚙️ Current Settings:**
+            - Confidence Threshold: {confidence_threshold:.0%}
+            - Mode: {mode.split()[0]}
+            
+            **📊 Model Performance:**
             - Accuracy: {Config.MODEL_ACCURACY:.0%}
             - Precision: {Config.MODEL_PRECISION:.0%}
             - Recall: {Config.MODEL_RECALL:.0%}
             - Input: {Config.TARGET_IMAGE_SIZE[0]}×{Config.TARGET_IMAGE_SIZE[1]}
+            
+            **💡 Tips:**
+            - Threshold 0.50: Sensitive (more detections, more false alarms)
+            - Threshold 0.75: Balanced
+            - Threshold 0.85+: Conservative (fewer false positives)
             """)
             
             return mode, confidence_threshold
@@ -935,10 +954,10 @@ def run_image_analysis_mode(
             with col_results:
                 st.subheader("🎯 Prediction Results")
                 
-                # Make prediction
+                # Make prediction - ✅ NOW PASSES CONFIDENCE_THRESHOLD
                 with st.spinner("🔍 Analyzing..."):
                     is_accident, confidence, accident_prob, non_accident_prob = \
-                        prediction_engine.predict_image(image_pil)
+                        prediction_engine.predict_image(image_pil, confidence_threshold)
                 
                 if confidence is not None:
                     prediction_label, color_code = UIComponents.render_prediction_result(
@@ -990,9 +1009,9 @@ def run_video_analysis_mode(
                 tmp_file.write(uploaded_video.read())
                 video_path = tmp_file.name
             
-            st.info("🔍 Processing video... This may take a few minutes.")
+            st.info(f"🔍 Processing video with confidence threshold {confidence_threshold:.0%}... This may take a few minutes.")
             
-            # Process video
+            # Process video - ✅ confidence_threshold is passed to process()
             video_results = video_processor.process(video_path, confidence_threshold)
             
             if video_results is None:
